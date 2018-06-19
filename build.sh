@@ -2,7 +2,6 @@
 # kernel build script by Tkkg1994 v0.6 (optimized from apq8084 kernel source)
 
 export MODEL=gracelte
-export VARIANT=eur
 export ARCH=arm64
 export VERSION=V2.0.0
 export BUILD_CROSS_COMPILE=~/Desktop/kernel/toolchains/aarch64-cortex_a53-linux-gnueabi-gcc-6/bin/aarch64-cortex_a53-linux-gnueabi-
@@ -19,11 +18,16 @@ KERNEL_VERSION=V2.0.0
 PAGE_SIZE=2048
 DTB_PADDING=0
 
+FUNC_DEFCONFIG()
+{
 case $MODEL in
 gracelte)
 	case $VARIANT in
 	can|duos|eur|xx)
 		KERNEL_DEFCONFIG=exynos8890-gracelte_defconfig
+		;;
+	kor)
+		KERNEL_DEFCONFIG=exynos8890-${MODEL}kor_defconfig
 		;;
 	*)
 		echo "Unknown variant: $VARIANT"
@@ -36,6 +40,7 @@ gracelte)
 	exit 1
 	;;
 esac
+}
 
 FUNC_CLEAN()
 {
@@ -100,6 +105,16 @@ FUNC_BUILD_DTIMAGE_TARGET()
 				exynos8890-gracelte_eur_open_05 exynos8890-gracelte_eur_open_07
 				exynos8890-gracelte_eur_open_09 exynos8890-gracelte_eur_open_11"
 			;;
+		kor)
+			DTSFILES="exynos8890-gracelte_kor_all_01 exynos8890-gracelte_kor_all_02
+				exynos8890-gracelte_kor_all_03 exynos8890-gracelte_kor_all_05
+				exynos8890-gracelte_kor_all_07 exynos8890-gracelte_kor_all_09
+				exynos8890-gracelte_kor_all_11 exynos8890-gracelte_kor_all_12"
+			;;
+	*)
+		echo "Unknown device: $VARIANT"
+		exit 1
+		;;
 		esac
 	;;
 	*)
@@ -122,7 +137,7 @@ FUNC_BUILD_DTIMAGE_TARGET()
 	for dts in $DTSFILES; do
 		echo "=> Processing: ${dts}.dts"
 		${CROSS_COMPILE}cpp -nostdinc -undef -x assembler-with-cpp -I "$INCDIR" "$DTSDIR/${dts}.dts" > "${dts}.dts"
-		echo "=> Generating: ${dts}.dtb"
+	echo "=> Generating: ${dts}.dtb"
 		$DTCTOOL -p $DTB_PADDING -i "$DTSDIR" -O dtb -o "${dts}.dtb" "${dts}.dts"
 	done
 
@@ -177,12 +192,23 @@ FUNC_BUILD_RAMDISK()
 			./repackimg.sh --nosudo
 			echo SEANDROIDENFORCE >> image-new.img
 			;;
-		esac
-	;;
+		kor)
+			mv -f $RDIR/arch/$ARCH/boot/boot.img-zImage $RDIR/ramdisk/SM-N935K/split_img/boot.img-zImage
+			mv -f $RDIR/arch/$ARCH/boot/boot.img-dtb $RDIR/ramdisk/SM-N935K/split_img/boot.img-dtb
+			cd $RDIR/ramdisk/SM-N935K
+			./repackimg.sh --nosudo
+			echo SEANDROIDENFORCE >> image-new.img
+			;;
 	*)
-		echo "Unknown device: $MODEL"
+		echo "Unknown device: $VARIANT"
 		exit 1
 		;;
+	esac
+;;
+*)
+	echo "Unknown device: $MODEL"
+	exit 1
+	;;
 	esac
 	echo ""
         echo "=============================================="
@@ -206,12 +232,19 @@ FUNC_BUILD_ZIP()
 		can|duos|eur|xx)
 			mv -f $RDIR/ramdisk/SM-N935F/image-new.img $RDIR/build/$MODEL-$VARIANT.img
 			;;
-		esac
-	;;
+		kor)
+			mv -f $RDIR/ramdisk/SM-N935K/image-new.img $RDIR/build/$MODEL-$VARIANT.img
+			;;
 	*)
-		echo "Unknown device: $MODEL"
+		echo "Unknown device: $VARIANT"
 		exit 1
 		;;
+	esac
+;;
+*)
+	echo "Unknown device: $MODEL"
+	exit 1
+	;;
 	esac
 	echo " "
 	echo "Creating flashable zip..."
@@ -241,6 +274,8 @@ exit
 OPTION_2()
 {
 (
+	export VARIANT=eur
+	FUNC_DEFCONFIG
 	START_TIME=`date +%s`
 	rm $RDIR/arch/$ARCH/boot/Image
 	rm $RDIR/arch/$ARCH/boot/dts/*.dtb
@@ -268,6 +303,33 @@ OPTION_3()
 (
 FUNC_BUILD_RAMDISK
 FUNC_BUILD_ZIP
+) 2>&1	 | tee -a ./build.log
+exit
+}
+
+OPTION_4()
+{
+(
+	export VARIANT=kor
+	FUNC_DEFCONFIG
+	START_TIME=`date +%s`
+	rm $RDIR/arch/$ARCH/boot/Image
+	rm $RDIR/arch/$ARCH/boot/dts/*.dtb
+	rm -rf $RDIR/arch/arm64/boot/dtb
+	FUNC_BUILD_KERNEL
+	FUNC_BUILD_DTIMAGE_TARGET
+	rm -f $RDIR/ramdisk/SM-N935F/split_img/boot.img-zImage
+	rm -f $RDIR/ramdisk/SM-N935F/split_img/boot.img-dtb
+	FUNC_BUILD_RAMDISK
+	FUNC_BUILD_ZIP
+
+	END_TIME=`date +%s`
+	
+	let "ELAPSED_TIME=$END_TIME-$START_TIME"
+	echo "Total compile time was $ELAPSED_TIME seconds"
+	echo "build common config="$KERNEL_DEFCONFIG ""
+	echo "ARCH = "$ARCH ""
+	echo "toolchain = "$BUILD_CROSS_COMPILE ""
 ) 2>&1	 | tee -a ./build.log
 exit
 }
@@ -302,6 +364,7 @@ echo ""
 echo " 1) Build Zimage Only"
 echo " 2) Build All"
 echo " 3) Build Boot.img & Zipping"
+echo " 4) Build Kor Version"
 echo ""
 echo " 9) Exit"
 echo ""
