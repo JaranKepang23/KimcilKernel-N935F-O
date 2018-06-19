@@ -14,7 +14,7 @@ DTBDIR=$OUTDIR/dtb
 DTCTOOL=$RDIR/scripts/dtc/dtc
 INCDIR=$RDIR/include
 KERNELNAME=KimcilKernel
-KERNEL_VERSION=V2.0.0
+KERNEL_VERSION=V2.0
 PAGE_SIZE=2048
 DTB_PADDING=0
 
@@ -59,6 +59,10 @@ rm -f $RDIR/ramdisk/SM-N935F/image-new.img
 rm -f $RDIR/ramdisk/SM-N935F/ramdisk-new.cpio.gz
 rm -f $RDIR/ramdisk/SM-N935F/split_img/boot.img-dtb
 rm -f $RDIR/ramdisk/SM-N935F/split_img/boot.img-zImage
+rm -f $RDIR/ramdisk/SM-N935K/image-new.img
+rm -f $RDIR/ramdisk/SM-N935K/ramdisk-new.cpio.gz
+rm -f $RDIR/ramdisk/SM-N935K/split_img/boot.img-dtb
+rm -f $RDIR/ramdisk/SM-N935K/split_img/boot.img-zImage
 echo "" > $RDIR/ramdisk/SM-N935F/ramdisk/acct/Placeholder
 echo "" > $RDIR/ramdisk/SM-N935F/ramdisk/cache/Placeholder
 echo "" > $RDIR/ramdisk/SM-N935F/ramdisk/data/Placeholder
@@ -69,19 +73,6 @@ echo "" > $RDIR/ramdisk/SM-N935F/ramdisk/proc/Placeholder
 echo "" > $RDIR/ramdisk/SM-N935F/ramdisk/storage/Placeholder
 echo "" > $RDIR/ramdisk/SM-N935F/ramdisk/sys/Placeholder
 echo "" > $RDIR/ramdisk/SM-N935F/ramdisk/system/Placeholder
-}
-
-FUNC_CLEAN_DTB()
-{
-	if ! [ -d $RDIR/arch/$ARCH/boot/dts ] ; then
-		echo "no directory : "$RDIR/arch/$ARCH/boot/dts""
-	else
-		echo "rm files in : "$RDIR/arch/$ARCH/boot/dts/*.dtb""
-		rm $RDIR/arch/$ARCH/boot/dts/*.dtb
-		rm $RDIR/arch/$ARCH/boot/dtb/*.dtb
-		rm $RDIR/arch/$ARCH/boot/boot.img-dtb
-		rm $RDIR/arch/$ARCH/boot/boot.img-zImage
-	fi
 }
 
 FUNC_BUILD_DTIMAGE_TARGET()
@@ -301,6 +292,8 @@ exit
 OPTION_3()
 {
 (
+
+	export VARIANT=eur
 FUNC_BUILD_RAMDISK
 FUNC_BUILD_ZIP
 ) 2>&1	 | tee -a ./build.log
@@ -318,8 +311,8 @@ OPTION_4()
 	rm -rf $RDIR/arch/arm64/boot/dtb
 	FUNC_BUILD_KERNEL
 	FUNC_BUILD_DTIMAGE_TARGET
-	rm -f $RDIR/ramdisk/SM-N935F/split_img/boot.img-zImage
-	rm -f $RDIR/ramdisk/SM-N935F/split_img/boot.img-dtb
+	rm -f $RDIR/ramdisk/SM-N935K/split_img/boot.img-zImage
+	rm -f $RDIR/ramdisk/SM-N935K/split_img/boot.img-dtb
 	FUNC_BUILD_RAMDISK
 	FUNC_BUILD_ZIP
 
